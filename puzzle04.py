@@ -42,6 +42,7 @@ def valid_height(height):
 def valid_hair_color(hair_color):
     return len(hair_color) == 7 and hair_color[0] == '#' and set(hair_color[1:]) <= hex_set
 
+
 def valid_pid(pid):
     return len(pid) == 9 and set(pid) <= dec_set
 
