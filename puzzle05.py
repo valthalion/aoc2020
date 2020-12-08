@@ -14,10 +14,10 @@ def part_1():
 
 
 def part_2():
-    sorted_seats = sorted(read_input())
-    for prev, succ in zip(sorted_seats, sorted_seats[1:]):
-        if succ - prev > 1:
-            return prev + 1
+    occupied_seats = set(read_input())
+    all_seats = set(range(min(occupied_seats), max(occupied_seats) + 1))
+    return (all_seats - occupied_seats).pop()
+
 
 
 def main():
