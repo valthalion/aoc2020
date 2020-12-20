@@ -3,6 +3,30 @@ from functools import reduce
 from operator import mul
 
 
+monster_spec = ("                  # ", "#    ##    ##    ###", " #  #  #  #  #  #   ")
+monster = {
+    'width': len(monster_spec[0]),
+    'height': len(monster_spec),
+    'positions': {(r, c)
+                  for r, row in enumerate(monster_spec)
+                  for c, char in enumerate(row)
+                  if char == '#'}
+}
+
+
+def rotate(img):
+    n = len(img[0])
+    return tuple(''.join(row[col] for row in img) for col in range(n-1, -1, -1))
+
+
+def flip_vertical(img):
+    return tuple(reversed(img))
+
+
+def flip_horizontal(img):
+    return tuple(row[::-1] for row in img)
+
+
 class Tile:
     def __init__(self, tile_id, tile):
         self.id = tile_id
@@ -44,8 +68,7 @@ class Tile:
             raise RuntimeError('Houston, we have a problem!')
 
     def rotate(self):  # ccw
-        n = len(self.tile[0])
-        self.tile = tuple(''.join(row[col] for row in self.tile) for col in range(n-1, -1, -1))
+        self.tile = rotate(self.tile)
         self.boundaries = [
             self.boundaries[1],
             self.boundaries[2][::-1],
@@ -55,7 +78,7 @@ class Tile:
         self.links = [*self.links[1:], self.links[0]]
 
     def flip_vertical(self):
-        self.tile = tuple(reversed(self.tile))
+        self.tile = flip_vertical(self.tile)
         self.boundaries = [
             self.boundaries[2],
             self.boundaries[1][::-1],
@@ -65,7 +88,7 @@ class Tile:
         self.links[0], self.links[2] = self.links[2], self.links[0]
 
     def flip_horizontal(self):
-        self.tile = tuple(row[::-1] for row in self.tile)
+        self.tile = flip_horizontal(self.tile)
         self.boundaries = [
             self.boundaries[0][::-1],
             self.boundaries[3],
@@ -147,7 +170,7 @@ def build_image(tiles):
     col = 0
     tile = prev_row[col].links[2]
 
-    while tile.connectivity != 2:
+    while tile:
         match(tile, None, prev_row[col])
         row.append(tile)
         prev_tile, tile = tile, tile.links[1]
@@ -169,6 +192,15 @@ def build_image(tiles):
     return stitch(img)
 
 
+def mark_monsters(image):
+    marked = set()
+    for row in range(len(image) - monster['height'] + 1):
+        for col in range(len(image[0]) - monster['width'] + 1):
+            monster_positions = set((row + r, col + c) for r, c in monster['positions'])
+            if all(image[row][col] == '#' for row, col in monster_positions):
+                marked |= monster_positions
+    return marked
+
 def part_1():
     tiles = read_input()
     compatibilities = assess_compatibilities(tiles)
@@ -183,5 +215,17 @@ def part_2():
     for tile in tiles.values():
         tile.set_compatibility(compatibilities, tiles)
     image = build_image(tiles)
-    for line in image:
-        print(line)
+    rotations = 0
+    while True:
+        if (marked := (mark_monsters(image) or
+                       mark_monsters(flip_horizontal(image)) or
+                       mark_monsters(flip_vertical(image)))):
+            hashes = set((r, c)
+                         for r in range(len(image))
+                         for c in range(len(image[0]))
+                         if image[r][c] == '#')
+            return len(hashes) - len(marked)
+        rotations += 1
+        if rotations >= 4:
+            raise RuntimeError('No monsters found')
+        image = rotate(image)
